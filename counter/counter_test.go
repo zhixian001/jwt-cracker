@@ -1,6 +1,7 @@
 package counter_test
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -75,7 +76,7 @@ func TestToBigInt(t *testing.T) {
 	}
 }
 
-func TestLoadInt(t *testing.T) {
+func TestLoadIntSlow(t *testing.T) {
 	alphabet := "012"
 	maxLength := 4
 
@@ -142,3 +143,71 @@ func TestLoadInt(t *testing.T) {
 // 9 3 1
 
 //  27+3+2
+
+func TestGetNumberOfDigitsInBijectiveSystem(t *testing.T) {
+	alphabet := "012"
+	maxLength := 4
+
+	cntr := counter.MakeCounter(alphabet, maxLength)
+
+	for n := 1; n <= 120; n++ {
+		testingNumber := big.NewInt(int64(n))
+		digits := cntr.GetNumberOfDigitsInBijectiveSystem(testingNumber)
+
+		fmt.Printf("number: %d\t-> digit: %d\n", n, digits)
+
+		switch n {
+		case 1:
+			if digits != 1 {
+				t.Errorf("%d th number's digit should be 1\n", n)
+			}
+		case 4:
+			if digits != 2 {
+				t.Errorf("%d th number's digit should be 2\n", n)
+			}
+		case 12:
+			if digits != 2 {
+				t.Errorf("%d th number's digit should be 2\n", n)
+			}
+		case 13:
+			if digits != 3 {
+				t.Errorf("%d th number's digit should be 3\n", n)
+			}
+		default:
+			//
+		}
+	}
+}
+
+func TestLoadInt(t *testing.T) {
+	alphabet := "012"
+	maxLength := 4
+
+	cntr := counter.MakeCounter(alphabet, maxLength)
+
+	for i := int64(1); i <= 120; i++ {
+		cntr.LoadBigInt(big.NewInt(i))
+		println("\t" + cntr.ToString())
+	}
+
+	cntr.LoadBigInt(big.NewInt(13))
+	toStringResult := cntr.ToString()
+
+	if toStringResult != "000" {
+		t.Errorf("Counter LoadBigInt Error. (expected: %s, actual: %s)\n", "000", toStringResult)
+	}
+
+	cntr.LoadBigInt(big.NewInt(32))
+	toStringResult = cntr.ToString()
+
+	if toStringResult != "201" {
+		t.Errorf("Counter LoadBigInt Error. (expected: %s, actual: %s)\n", "201", toStringResult)
+	}
+
+	cntr.LoadBigInt(big.NewInt(4))
+	toStringResult = cntr.ToString()
+
+	if toStringResult != "00" {
+		t.Errorf("Counter LoadBigInt Error. (expected: %s, actual: %s)\n", "00", toStringResult)
+	}
+}

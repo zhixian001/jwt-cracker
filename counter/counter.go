@@ -1,7 +1,13 @@
 package counter
 
+// #cgo CFLAGS: -Wall
+// #cgo pkg-config: mpfr gmp
+// #include "mpfr_calculation.h"
+import "C"
+
 import (
 	"errors"
+	"math"
 	"math/big"
 	"strings"
 )
@@ -160,8 +166,107 @@ func (cntr *counter) ToBigInt() *big.Int {
 // decimal system to counter(bijective numerial system)
 // TODO: Implement this!!! critical logic
 func (cntr *counter) LoadBigInt(inp *big.Int) {
+	// Cases (under base 3 bijective)
+	// 1 - digit
+	// 	dec: [1  ,  3]
+	// 2 - digit
+	//  dec: [4  , 12]
+	// 3 - digit
+	// 	dec: [13 , 39]
+	// 4 - digit
+	// 	dec: [40 , 120]
+	// ...
+	// n - digit
+	//  dec: [, ]
+
 	cntr.reset()
 
+	// find number of digit candidates
+	numberOfDigits := cntr.GetNumberOfDigitsInBijectiveSystem(inp)
+
+	base := big.NewInt(int64(cntr.base))
+	bigIntOne := big.NewInt(1)
+	bigIntZero := big.NewInt(0)
+
+	// fill all digits
+	subtractor := new(big.Int).Exp(base, big.NewInt(int64(numberOfDigits)), nil)
+	subtractor.Sub(subtractor, bigIntOne)
+	subtractHelper := new(big.Int).Sub(base, bigIntOne)
+	subtractor.Div(subtractor, subtractHelper)
+
+	// Copy from input
+	remaining := new(big.Int).Set(inp)
+
+	// Subtract subtractor from remaining
+	remaining.Sub(remaining, subtractor)
+
+	// fmt.Printf("%d - %d = %d\n", inp, subtractor, remaining)
+
+	// Set other digit numbers
+	// common base n system (with 0)
+	if numberOfDigits > cntr.width {
+		panic(errors.New("digit is wider than counter width"))
+	}
+
+	digitDifference := cntr.width - numberOfDigits
+
+	// fill counter
+	for i := range cntr.counter {
+		if i+digitDifference == cntr.width {
+			break
+		}
+
+		currentDigitMultiplier := new(big.Int).Exp(base, big.NewInt(int64(cntr.width-i-digitDifference-1)), nil)
+
+		additionalDigit := 0
+
+		for additionalDigitCandidate := cntr.base - 1; additionalDigitCandidate > 0; additionalDigitCandidate-- {
+			subtractor = subtractor.Mul(currentDigitMultiplier, big.NewInt(int64(additionalDigitCandidate)))
+
+			subtractHelper = subtractHelper.Sub(remaining, subtractor)
+
+			// Compare
+			if subtractHelper.Cmp(bigIntZero) >= 0 {
+				remaining.Set(subtractHelper)
+
+				additionalDigit = additionalDigitCandidate
+				break
+			}
+		}
+
+		cntr.counter[i+digitDifference] = 1 + additionalDigit
+	}
+}
+
+// Calculate how many digits are needed to express input decimal integer in bijective format
+func (cntr *counter) GetNumberOfDigitsInBijectiveSystem(number *big.Int) int {
+	base := big.NewInt(int64(cntr.base))
+
+	baseLn := math.Log(float64(cntr.base))
+
+	bigIntOne := big.NewInt(1)
+
+	// left
+	leftOver := new(big.Int).Sub(base, bigIntOne)
+	leftOver.Mul(leftOver, number)
+	leftOver.Add(leftOver, base)
+
+	leftOverLog := float64(C.log_e(C.CString(leftOver.String())))
+
+	leftValue := math.Ceil((leftOverLog / baseLn) - 1)
+
+	// right
+	rightOver := new(big.Int).Sub(base, bigIntOne)
+	rightOver.Mul(rightOver, number)
+	rightOver.Add(rightOver, bigIntOne)
+
+	rightOverLog := float64(C.log_e(C.CString(rightOver.String())))
+	rightValue := math.Floor(rightOverLog / baseLn)
+
+	// TODO: Panic if rightValue - leftValue > 2
+
+	// Result
+	return int(math.Min(leftValue, rightValue))
 }
 
 // Load from bigint number (iterative slow version - very slow. for debugging)

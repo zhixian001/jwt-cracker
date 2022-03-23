@@ -45,7 +45,8 @@ func generateSecretPartitions(alphabet string, maxLength int, partitionCount int
 		fmt.Printf("partition: %d // ", i)
 
 		fmt.Print(accumStart)
-		cntr.LoadBigIntSlow(accumStart)
+		// cntr.LoadBigIntSlow(accumStart)
+		cntr.LoadBigInt(accumStart)
 		startSecret := cntr.ToString()
 		fmt.Printf(" startSecret: %s // ", startSecret)
 
@@ -54,7 +55,8 @@ func generateSecretPartitions(alphabet string, maxLength int, partitionCount int
 		if i == partitionCount-1 {
 			accumEnd.Set(numberOfCombinations)
 		}
-		cntr.LoadBigIntSlow(accumEnd)
+		// cntr.LoadBigIntSlow(accumEnd)
+		cntr.LoadBigInt(accumEnd)
 
 		endSecret := cntr.ToString()
 		fmt.Printf(" endSecret: %s \n", endSecret)
