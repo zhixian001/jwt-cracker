@@ -25,7 +25,7 @@ Usage of ./jwt-cracker:
   -char string
         Characters to generate secret texts during brute-force process. (default "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
   -jobs int
-        Number of concurrent goroutines to crack jwt (default 10)
+        Number of concurrent goroutines to crack jwt (default ?(value depends on number of cores or threads))
   -maxlen int
         Max length of the secret text during brute-force process (default 12)
   -report-interval int
@@ -78,7 +78,12 @@ Found Secret (in 16.015405 seconds): secret
 
 ### Time Spent
 
-- Apple M1 Max (2 E Cores + 8 P Cores) @ 3.22 GHz (jobs = 10) : 15 ~ 20 seconds
-- Intel Xeon Gold 6142 (2 CPU, Total: 32 Cores 64 Threads) @ 3.7 GHz (jobs = 64) : 40 ~ 45 seconds
-- Intel Core i9-9900K (8 Cores 16 Threads) @ 5.0 GHz (jobs = 16) : 35 ~ 40 seconds
-- 
+- `Apple M1 Max (2 E Cores + 8 P Cores) @ 3.22 GHz`
+  - jobs: 10
+  - time taken: **15 ~ 20 seconds**
+- `Intel Xeon Gold 6142 (2 CPU, Total: 32 Cores 64 Threads) @ 3.7 GHz`
+  - jobs: 64
+  - time taken: **40 ~ 45 seconds**
+- `Intel Core i9-9900K (8 Cores 16 Threads) @ 5.0 GHz`
+  - jobs: 16
+  - time taken: **35 ~ 40 seconds**
