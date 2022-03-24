@@ -22,8 +22,3 @@ double log_e(char* input_int) {
 
     return result;
 }
-
-// #cgo LDFLAGS: -L "/opt/homebrew/lib" -lmpfr -lgmp
-// #cgo CPPFLAGS: -I "/opt/homebrew/include"
-// #cgo FLAGS: -fuse-ld=lld
-// 위의 것들 다 필요없이 cpp -> c 확장자 변경으로 linker 관련 문제 해결

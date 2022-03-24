@@ -37,11 +37,6 @@ func MakeCounter(alphabet string, maxLength int) *counter {
 	return counter
 }
 
-// TODO: Is overflow check required in this system?
-// func (cntr *counter) checkOverflow() bool {
-// return cntr.enabledWidth > cntr.width
-// }
-
 // Increase counter value by 1
 func (cntr *counter) Increase() {
 	lastDigitNewVal := cntr.counter[cntr.width-1] + 1
@@ -164,7 +159,6 @@ func (cntr *counter) ToBigInt() *big.Int {
 
 // Load counter value from bigint number
 // decimal system to counter(bijective numerial system)
-// TODO: Implement this!!! critical logic
 func (cntr *counter) LoadBigInt(inp *big.Int) {
 	// Cases (under base 3 bijective)
 	// 1 - digit
@@ -199,8 +193,6 @@ func (cntr *counter) LoadBigInt(inp *big.Int) {
 
 	// Subtract subtractor from remaining
 	remaining.Sub(remaining, subtractor)
-
-	// fmt.Printf("%d - %d = %d\n", inp, subtractor, remaining)
 
 	// Set other digit numbers
 	// common base n system (with 0)
@@ -263,8 +255,6 @@ func (cntr *counter) GetNumberOfDigitsInBijectiveSystem(number *big.Int) int {
 	rightOverLog := float64(C.log_e(C.CString(rightOver.String())))
 	rightValue := math.Floor(rightOverLog / baseLn)
 
-	// TODO: Panic if rightValue - leftValue > 2
-
 	// Result
 	return int(math.Min(leftValue, rightValue))
 }
@@ -273,32 +263,6 @@ func (cntr *counter) GetNumberOfDigitsInBijectiveSystem(number *big.Int) int {
 // decimal system to counter(bijective numerial system)
 func (cntr *counter) LoadBigIntSlow(inp *big.Int) {
 	cntr.reset()
-
-	// inpCopied := big.NewInt(0).Set(inp)
-
-	// base := big.NewInt(int64(cntr.base))
-	// zero := big.NewInt(0)
-
-	// for i := range cntr.counter {
-	// 	calc := big.NewInt(0)
-
-	// 	currentDigitMutiplier := calc.Exp(base, big.NewInt(int64(i)), nil)
-	// 	currentDigitMaxValue := calc.Mul(currentDigitMutiplier, base)
-
-	// 	compareResult := inpCopied.Cmp(currentDigitMaxValue)
-
-	// 	if compareResult <= 0 {
-	// 		// 이번 자리에서 끝
-	// 		quotient := int(calc.Div(inpCopied, currentDigitMutiplier).Int64())
-
-	// 		cntr.counter[cntr.width-1-i] = quotient
-
-	// 		break
-	// 	} else {
-	// 		// 다음 자리수 계산
-	// 	}
-
-	// }
 
 	maxInt := big.NewInt(0)
 
@@ -314,7 +278,6 @@ func (cntr *counter) LoadBigIntSlow(inp *big.Int) {
 		panic(errors.New("counter int load error (out of range)"))
 	}
 
-	// TOFIX: Add Algorithm
 	for {
 		currentInt := cntr.ToBigInt()
 		if currentInt.Cmp(inp) == 0 {

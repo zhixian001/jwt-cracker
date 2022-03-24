@@ -30,9 +30,6 @@ func generateSecretPartitions(alphabet string, maxLength int, partitionCount int
 
 	calc := big.NewInt(0)
 
-	// cntr.ToMinValue()
-	// initialSecret := cntr.ToString()
-
 	jobsPerEachPartition := calc.Div(numberOfCombinations, big.NewInt(int64(partitionCount)))
 
 	partitions := make([]*SecretPartition, 0)
@@ -47,7 +44,6 @@ func generateSecretPartitions(alphabet string, maxLength int, partitionCount int
 		fmt.Printf("partition: %d // ", i)
 
 		fmt.Print(accumStart)
-		// cntr.LoadBigIntSlow(accumStart)
 		cntr.LoadBigInt(accumStart)
 		startSecret := cntr.ToString()
 		fmt.Printf(" startSecret: %s // ", startSecret)
@@ -57,7 +53,6 @@ func generateSecretPartitions(alphabet string, maxLength int, partitionCount int
 		if i == partitionCount-1 {
 			accumEnd.Set(numberOfCombinations)
 		}
-		// cntr.LoadBigIntSlow(accumEnd)
 		cntr.LoadBigInt(accumEnd)
 
 		endSecret := cntr.ToString()
@@ -68,7 +63,6 @@ func generateSecretPartitions(alphabet string, maxLength int, partitionCount int
 		accumEnd.Add(accumEnd, jobsPerEachPartition)
 
 		// add partition
-
 		toAdd := &SecretPartition{
 			startSecret: startSecret,
 			endSecret:   endSecret,
@@ -81,47 +75,11 @@ func generateSecretPartitions(alphabet string, maxLength int, partitionCount int
 	return partitions
 }
 
-func generateSecrets(alphabet string, n int, wg *sync.WaitGroup, done chan struct{}) <-chan string {
-	if n <= 0 {
-		return nil
-	}
-
-	c := make(chan string)
-
-	wg.Add(1)
-	go func() {
-		defer close(c)
-		var helper func(string)
-		helper = func(input string) {
-			if len(input) == n {
-				return
-			}
-			select {
-			case <-done:
-				return
-			default:
-			}
-			for _, char := range alphabet {
-				s := input + string(char)
-				c <- s
-				helper(s)
-			}
-		}
-		helper("")
-		wg.Done()
-	}()
-
-	return c
-}
-
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	// runtime.GOMAXPROCS(runtime.NumCPU() * 2)
 
 	token := flag.String("token", "", "The full HS256 jwt token to crack")
 	alphabet := flag.String("alphabet", "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", "The alphabet to use for the brute force")
-	// prefix := flag.String("prefix", "", "A string that is always prefixed to the secret")
-	// suffix := flag.String("suffix", "", "A string that is always suffixed to the secret")
 	maxLength := flag.Int("maxlen", 12, "The max length of the string generated during the brute force")
 	jobs := flag.Int("jobs", runtime.NumCPU(), "Max concurrent goroutines to run crack")
 	reportInterval := flag.Int("report-interval", 10, "Running status report interval (in seconds)")
@@ -129,17 +87,17 @@ func main() {
 	flag.Parse()
 
 	if *token == "" {
-		fmt.Println("Parameter token is empty\n")
+		fmt.Println("Parameter token is empty")
 		flag.Usage()
 		return
 	}
 	if *alphabet == "" {
-		fmt.Println("Parameter alphabet is empty\n")
+		fmt.Println("Parameter alphabet is empty")
 		flag.Usage()
 		return
 	}
 	if *maxLength == 0 {
-		fmt.Println("Parameter maxlen is 0\n")
+		fmt.Println("Parameter maxlen is 0")
 		flag.Usage()
 		return
 	}
@@ -176,14 +134,6 @@ func main() {
 	partitions := generateSecretPartitions(*alphabet, *maxLength, *jobs)
 
 	fmt.Println()
-	// fmt.Println(partitions)
-
-	// combinations := big.NewInt(0)
-	// for i := 1; i <= *maxLength; i++ {
-	// 	alen, mlen := big.NewInt(int64(len(*alphabet))), big.NewInt(int64(i))
-	// 	combinations.Add(combinations, alen.Exp(alen, mlen, nil))
-	// }
-	// fmt.Printf("There are %s combinations to attempt\nCracking JWT secret...\n", combinations.String())
 
 	done := make(chan struct{})
 	wg := &sync.WaitGroup{}
@@ -196,8 +146,6 @@ func main() {
 		wg.Add(1)
 		go func(startSecret, endSecret, alphabet string, maxLength, pIdx int, wg *sync.WaitGroup, done chan struct{}) {
 			partitionCounter := counter.MakeCounter(alphabet, maxLength)
-
-			// fmt.Println(startSecret)
 
 			partitionCounter.LoadString(startSecret)
 
@@ -215,8 +163,6 @@ func main() {
 				default:
 					if bytes.Equal(parsed.Signature, jwt.GenerateSignature(parsed.Message, []byte(currentSecret))) {
 						foundSecret = currentSecret
-
-						// fmt.Printf("Found Secret (in partition %d): %s\n", pIdx, currentSecret)
 
 						found = true
 						close(done)
@@ -244,37 +190,11 @@ func main() {
 		}(partition.startSecret, partition.endSecret, partition.alphabets, partition.maxLength, partitionIdx, wg, done)
 	}
 
-	// for secret := range generateSecrets(*alphabet, *maxLength, wg, done) {
-	// 	wg.Add(1)
-	// 	go func(s string, i uint64) {
-	// 		select {
-	// 		case <-done:
-	// 			wg.Done()
-	// 			return
-	// 		default:
-	// 		}
-	// 		if bytes.Equal(parsed.Signature, jwt.GenerateSignature(parsed.Message, []byte(*prefix+s+*suffix))) {
-	// 			fmt.Printf("Found secret in %d attempts: %s\n", attempts, *prefix+s+*suffix)
-	// 			found = true
-	// 			close(done)
-	// 		}
-	// 		wg.Done()
-	// 	}(secret, attempts)
-
-	// 	attempts++
-	// 	if attempts%100000 == 0 {
-	// 		elapsedSeconds := time.Since(startTime).Seconds()
-	// 		startTime = time.Now()
-	// 		fmt.Printf("Attempts: %d /// APS: %.3f a/s\n", attempts, 100000/elapsedSeconds)
-	// 	}
-	// }
-
 	wg.Wait()
 
 	elapsedSeconds := time.Since(startTime).Seconds()
 
 	if !found {
-		// fmt.Printf("No secret found in %d attempts\n", attempts)
 		fmt.Printf("\nNo secret found (in %f seconds )\n", elapsedSeconds)
 	} else {
 		fmt.Printf("\nFound Secret (in %f seconds ): %s\n", elapsedSeconds, foundSecret)
