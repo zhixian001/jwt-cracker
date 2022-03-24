@@ -197,7 +197,7 @@ func (cntr *counter) LoadBigInt(inp *big.Int) {
 	// Set other digit numbers
 	// common base n system (with 0)
 	if numberOfDigits > cntr.width {
-		panic(errors.New("digit is wider than counter width"))
+		panic(errors.New("digit is wider than the counter width"))
 	}
 
 	digitDifference := cntr.width - numberOfDigits
