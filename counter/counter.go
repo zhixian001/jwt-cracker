@@ -13,23 +13,23 @@ import (
 )
 
 type counter struct {
-	alphabetSplit []string
-	counter       []int
-	base          int
-	width         int
-	overflow      bool
+	charsSplit []string
+	counter    []int
+	base       int
+	width      int
+	overflow   bool
 }
 
 // Couter of number of cases
-func MakeCounter(alphabet string, maxLength int) *counter {
-	alphaSplit := strings.Split(alphabet, "")
+func MakeCounter(chars string, maxLength int) *counter {
+	charsSplit := strings.Split(chars, "")
 
 	counter := &counter{
-		alphabetSplit: alphaSplit,
-		counter:       make([]int, maxLength),
-		base:          len(alphaSplit),
-		width:         maxLength,
-		overflow:      false,
+		charsSplit: charsSplit,
+		counter:    make([]int, maxLength),
+		base:       len(charsSplit),
+		width:      maxLength,
+		overflow:   false,
 	}
 
 	counter.counter[maxLength-1] = 1
@@ -86,9 +86,9 @@ func (cntr *counter) ToString() string {
 
 	result := ""
 
-	for _, alphabetIndex := range cntr.counter {
-		if alphabetIndex != 0 {
-			result += cntr.alphabetSplit[alphabetIndex-1]
+	for _, charIndex := range cntr.counter {
+		if charIndex != 0 {
+			result += cntr.charsSplit[charIndex-1]
 		}
 	}
 
@@ -105,12 +105,12 @@ func (cntr *counter) reset() {
 	cntr.counter[cntr.width-1] = 1
 }
 
-// Get index of alphabet inside 'alphabetSplit' array.
-func (cntr *counter) alphabetIndexOf(alpha string) int {
+// Get index of char inside 'charsSplit' array.
+func (cntr *counter) charIndexOf(char string) int {
 	searchIdx := -1
 
-	for i := range cntr.alphabetSplit {
-		if cntr.alphabetSplit[i] == alpha {
+	for i := range cntr.charsSplit {
+		if cntr.charsSplit[i] == char {
 			searchIdx = i
 			break
 		}
@@ -132,7 +132,7 @@ func (cntr *counter) LoadString(str string) {
 
 	strIdx := 0
 	for counterIdx := cntr.width - len(inputStrSplitted); counterIdx < cntr.width; counterIdx++ {
-		cntr.counter[counterIdx] = cntr.alphabetIndexOf(inputStrSplitted[strIdx]) + 1
+		cntr.counter[counterIdx] = cntr.charIndexOf(inputStrSplitted[strIdx]) + 1
 
 		strIdx++
 	}

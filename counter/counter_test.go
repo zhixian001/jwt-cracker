@@ -9,10 +9,10 @@ import (
 )
 
 func TestToString(t *testing.T) {
-	alphabet := "012"
+	chars := "012"
 	maxLength := 4
 
-	cntr := counter.MakeCounter(alphabet, maxLength)
+	cntr := counter.MakeCounter(chars, maxLength)
 
 	cntr.Increase()
 	cntr.Increase()
@@ -26,10 +26,10 @@ func TestToString(t *testing.T) {
 }
 
 func TestLoadString(t *testing.T) {
-	alphabet := "012"
+	chars := "012"
 	maxLength := 4
 
-	cntr := counter.MakeCounter(alphabet, maxLength)
+	cntr := counter.MakeCounter(chars, maxLength)
 
 	cntr.Increase()
 	cntr.Increase()
@@ -46,10 +46,10 @@ func TestLoadString(t *testing.T) {
 }
 
 func TestToBigInt(t *testing.T) {
-	alphabet := "012"
+	chars := "012"
 	maxLength := 4
 
-	cntr := counter.MakeCounter(alphabet, maxLength)
+	cntr := counter.MakeCounter(chars, maxLength)
 
 	cntr.LoadString("000")
 
@@ -77,10 +77,10 @@ func TestToBigInt(t *testing.T) {
 }
 
 func TestLoadIntSlow(t *testing.T) {
-	alphabet := "012"
+	chars := "012"
 	maxLength := 4
 
-	cntr := counter.MakeCounter(alphabet, maxLength)
+	cntr := counter.MakeCounter(chars, maxLength)
 
 	for i := int64(1); i <= 120; i++ {
 		cntr.LoadBigIntSlow(big.NewInt(i))
@@ -110,10 +110,10 @@ func TestLoadIntSlow(t *testing.T) {
 }
 
 func TestGetNumberOfDigitsInBijectiveSystem(t *testing.T) {
-	alphabet := "012"
+	chars := "012"
 	maxLength := 4
 
-	cntr := counter.MakeCounter(alphabet, maxLength)
+	cntr := counter.MakeCounter(chars, maxLength)
 
 	for n := 1; n <= 120; n++ {
 		testingNumber := big.NewInt(int64(n))
@@ -145,10 +145,10 @@ func TestGetNumberOfDigitsInBijectiveSystem(t *testing.T) {
 }
 
 func TestLoadInt(t *testing.T) {
-	alphabet := "012"
+	chars := "012"
 	maxLength := 4
 
-	cntr := counter.MakeCounter(alphabet, maxLength)
+	cntr := counter.MakeCounter(chars, maxLength)
 
 	for i := int64(1); i <= 120; i++ {
 		cntr.LoadBigInt(big.NewInt(i))

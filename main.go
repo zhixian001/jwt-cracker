@@ -18,12 +18,13 @@ import (
 type SecretPartition struct {
 	startSecret string
 	endSecret   string
-	alphabets   string
+	chars       string
 	maxLength   int
 }
 
-func generateSecretPartitions(alphabet string, maxLength int, partitionCount int) []*SecretPartition {
-	cntr := counter.MakeCounter(alphabet, maxLength)
+// Split possible secret texts into several partitions. (for concurrent process)
+func generateSecretPartitions(chars string, maxLength int, partitionCount int) []*SecretPartition {
+	cntr := counter.MakeCounter(chars, maxLength)
 	cntr.ToMaxValue()
 
 	numberOfCombinations := cntr.ToBigInt()
@@ -66,7 +67,7 @@ func generateSecretPartitions(alphabet string, maxLength int, partitionCount int
 		toAdd := &SecretPartition{
 			startSecret: startSecret,
 			endSecret:   endSecret,
-			alphabets:   alphabet,
+			chars:       chars,
 			maxLength:   maxLength,
 		}
 		partitions = append(partitions, toAdd)
@@ -78,38 +79,38 @@ func generateSecretPartitions(alphabet string, maxLength int, partitionCount int
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	token := flag.String("token", "", "The full HS256 jwt token to crack")
-	alphabet := flag.String("alphabet", "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", "The alphabet to use for the brute force")
-	maxLength := flag.Int("maxlen", 12, "The max length of the string generated during the brute force")
-	jobs := flag.Int("jobs", runtime.NumCPU(), "Max concurrent goroutines to run crack")
-	reportInterval := flag.Int("report-interval", 10, "Running status report interval (in seconds)")
+	token := flag.String("token", "", "HS256 JWT token string to crack")
+	char := flag.String("char", "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", "Characters to generate secret texts during brute-force process.")
+	maxLength := flag.Int("maxlen", 12, "Max length of the secret text during brute-force process")
+	jobs := flag.Int("jobs", runtime.NumCPU(), "Number of concurrent goroutines to crack jwt")
+	reportInterval := flag.Int("report-interval", 10, "Running status report interval in seconds")
 
 	flag.Parse()
 
 	if *token == "" {
-		fmt.Println("Parameter token is empty")
+		fmt.Println("token is empty")
 		flag.Usage()
 		return
 	}
-	if *alphabet == "" {
-		fmt.Println("Parameter alphabet is empty")
+	if *char == "" {
+		fmt.Println("char parameter should have at least one character")
 		flag.Usage()
 		return
 	}
-	if *maxLength == 0 {
-		fmt.Println("Parameter maxlen is 0")
+	if *maxLength <= 0 {
+		fmt.Println("maxlen should be greater than 0")
 		flag.Usage()
 		return
 	}
 
 	if *jobs < 1 {
-		fmt.Println("Parameter jobs is lower than 1")
+		fmt.Println("jobs should be greater than or equal to 1")
 		flag.Usage()
 		return
 	}
 
 	if *reportInterval < 1 {
-		fmt.Println("Report Interval is lower than 1")
+		fmt.Println("report-interval should be greater than or equal to 1")
 		flag.Usage()
 		return
 	}
@@ -131,7 +132,7 @@ func main() {
 		return
 	}
 
-	partitions := generateSecretPartitions(*alphabet, *maxLength, *jobs)
+	partitions := generateSecretPartitions(*char, *maxLength, *jobs)
 
 	fmt.Println()
 
@@ -139,15 +140,14 @@ func main() {
 	wg := &sync.WaitGroup{}
 	var found bool
 	var foundSecret string
-	// var attempts uint64
 	startTime := time.Now()
 
 	for partitionIdx, partition := range partitions {
 		wg.Add(1)
-		go func(startSecret, endSecret, alphabet string, maxLength, pIdx int, wg *sync.WaitGroup, done chan struct{}) {
-			partitionCounter := counter.MakeCounter(alphabet, maxLength)
+		go func(part *SecretPartition, pIdx int, wg *sync.WaitGroup, done chan struct{}) {
+			partitionCounter := counter.MakeCounter(part.chars, part.maxLength)
 
-			partitionCounter.LoadString(startSecret)
+			partitionCounter.LoadString(part.startSecret)
 
 			currentSecret := partitionCounter.ToString()
 
@@ -161,6 +161,7 @@ func main() {
 					wg.Done()
 					return
 				default:
+					// check secret
 					if bytes.Equal(parsed.Signature, jwt.GenerateSignature(parsed.Message, []byte(currentSecret))) {
 						foundSecret = currentSecret
 
@@ -171,7 +172,7 @@ func main() {
 					}
 
 					// update counter logic
-					if currentSecret == endSecret {
+					if currentSecret == part.endSecret {
 						wg.Done()
 						return
 					}
@@ -181,13 +182,12 @@ func main() {
 					// report
 					reportIntervalElapsed = time.Since(reportIntervalBegin).Seconds()
 					if reportIntervalElapsed > float64(*reportInterval) {
-						fmt.Printf("(Partition: %d) Running: %s / %s\n", pIdx, currentSecret, endSecret)
+						fmt.Printf("(Partition: %d) Running: %s / %s\n", pIdx, currentSecret, part.endSecret)
 						reportIntervalBegin = time.Now()
 					}
 				}
 			}
-
-		}(partition.startSecret, partition.endSecret, partition.alphabets, partition.maxLength, partitionIdx, wg, done)
+		}(partition, partitionIdx, wg, done)
 	}
 
 	wg.Wait()
@@ -195,8 +195,8 @@ func main() {
 	elapsedSeconds := time.Since(startTime).Seconds()
 
 	if !found {
-		fmt.Printf("\nNo secret found (in %f seconds )\n", elapsedSeconds)
+		fmt.Printf("\nNo secret found (%f seconds)\n", elapsedSeconds)
 	} else {
-		fmt.Printf("\nFound Secret (in %f seconds ): %s\n", elapsedSeconds, foundSecret)
+		fmt.Printf("\nFound Secret (in %f seconds): %s\n", elapsedSeconds, foundSecret)
 	}
 }
