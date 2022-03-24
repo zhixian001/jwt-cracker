@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/hex"
 	"flag"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/zhixian001/jwt-cracker/counter"
 	"github.com/zhixian001/jwt-cracker/jwt"
@@ -33,7 +35,7 @@ func generateSecretPartitions(alphabet string, maxLength int, partitionCount int
 
 	jobsPerEachPartition := calc.Div(numberOfCombinations, big.NewInt(int64(partitionCount)))
 
-	partitions := make([]*SecretPartition, partitionCount)
+	partitions := make([]*SecretPartition, 0)
 
 	// Calculate Partition
 	cntr.ToMinValue()
@@ -113,8 +115,8 @@ func generateSecrets(alphabet string, n int, wg *sync.WaitGroup, done chan struc
 }
 
 func main() {
-	// runtime.GOMAXPROCS(runtime.NumCPU())
-	runtime.GOMAXPROCS(runtime.NumCPU() * 2)
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	// runtime.GOMAXPROCS(runtime.NumCPU() * 2)
 
 	token := flag.String("token", "", "The full HS256 jwt token to crack")
 	alphabet := flag.String("alphabet", "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", "The alphabet to use for the brute force")
@@ -122,6 +124,7 @@ func main() {
 	// suffix := flag.String("suffix", "", "A string that is always suffixed to the secret")
 	maxLength := flag.Int("maxlen", 12, "The max length of the string generated during the brute force")
 	jobs := flag.Int("jobs", runtime.NumCPU(), "Max concurrent goroutines to run crack")
+	reportInterval := flag.Int("report-interval", 10, "Running status report interval (in seconds)")
 
 	flag.Parse()
 
@@ -147,6 +150,12 @@ func main() {
 		return
 	}
 
+	if *reportInterval < 1 {
+		fmt.Println("Report Interval is lower than 1")
+		flag.Usage()
+		return
+	}
+
 	err, parsed := jwt.ParseJWT(*token)
 	if err != nil {
 		fmt.Printf("Could not parse JWT: %v\n", err)
@@ -164,8 +173,9 @@ func main() {
 		return
 	}
 
-	generateSecretPartitions(*alphabet, *maxLength, *jobs)
+	partitions := generateSecretPartitions(*alphabet, *maxLength, *jobs)
 
+	fmt.Println()
 	// fmt.Println(partitions)
 
 	// combinations := big.NewInt(0)
@@ -175,11 +185,64 @@ func main() {
 	// }
 	// fmt.Printf("There are %s combinations to attempt\nCracking JWT secret...\n", combinations.String())
 
-	// done := make(chan struct{})
-	// wg := &sync.WaitGroup{}
-	// var found bool
+	done := make(chan struct{})
+	wg := &sync.WaitGroup{}
+	var found bool
+	var foundSecret string
 	// var attempts uint64
-	// startTime := time.Now()
+	startTime := time.Now()
+
+	for partitionIdx, partition := range partitions {
+		wg.Add(1)
+		go func(startSecret, endSecret, alphabet string, maxLength, pIdx int, wg *sync.WaitGroup, done chan struct{}) {
+			partitionCounter := counter.MakeCounter(alphabet, maxLength)
+
+			// fmt.Println(startSecret)
+
+			partitionCounter.LoadString(startSecret)
+
+			currentSecret := partitionCounter.ToString()
+
+			reportIntervalBegin := time.Now()
+
+			var reportIntervalElapsed float64
+
+			for {
+				select {
+				case <-done:
+					wg.Done()
+					return
+				default:
+					if bytes.Equal(parsed.Signature, jwt.GenerateSignature(parsed.Message, []byte(currentSecret))) {
+						foundSecret = currentSecret
+
+						// fmt.Printf("Found Secret (in partition %d): %s\n", pIdx, currentSecret)
+
+						found = true
+						close(done)
+						wg.Done()
+						return
+					}
+
+					// update counter logic
+					if currentSecret == endSecret {
+						wg.Done()
+						return
+					}
+					partitionCounter.Increase()
+					currentSecret = partitionCounter.ToString()
+
+					// report
+					reportIntervalElapsed = time.Since(reportIntervalBegin).Seconds()
+					if reportIntervalElapsed > float64(*reportInterval) {
+						fmt.Printf("(Partition: %d) Running: %s / %s\n", pIdx, currentSecret, endSecret)
+						reportIntervalBegin = time.Now()
+					}
+				}
+			}
+
+		}(partition.startSecret, partition.endSecret, partition.alphabets, partition.maxLength, partitionIdx, wg, done)
+	}
 
 	// for secret := range generateSecrets(*alphabet, *maxLength, wg, done) {
 	// 	wg.Add(1)
@@ -206,8 +269,14 @@ func main() {
 	// 	}
 	// }
 
-	// wg.Wait()
-	// if !found {
-	// 	fmt.Printf("No secret found in %d attempts\n", attempts)
-	// }
+	wg.Wait()
+
+	elapsedSeconds := time.Since(startTime).Seconds()
+
+	if !found {
+		// fmt.Printf("No secret found in %d attempts\n", attempts)
+		fmt.Printf("\nNo secret found (in %f seconds )\n", elapsedSeconds)
+	} else {
+		fmt.Printf("\nFound Secret (in %f seconds ): %s\n", elapsedSeconds, foundSecret)
+	}
 }
