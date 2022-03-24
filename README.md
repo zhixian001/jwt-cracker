@@ -87,3 +87,6 @@ Found Secret (in 16.015405 seconds): secret
 - `Intel Core i9-9900K (8 Cores 16 Threads) @ 5.0 GHz`
   - jobs: 16
   - time taken: **35 ~ 40 seconds**
+- `Intel Core i5-4690 (4 Corese 4 Threads) @ 3.9 GHz`
+  - jobs: 4
+  - time taken **215 ~ 220 seconds**
