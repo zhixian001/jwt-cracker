@@ -155,12 +155,17 @@ func main() {
 
 			var reportIntervalElapsed float64
 
+			var numberOfComparison int64
+			numberOfComparison = 0
+
 			for {
 				select {
 				case <-done:
 					wg.Done()
 					return
 				default:
+					numberOfComparison++
+
 					// check secret
 					if bytes.Equal(parsed.Signature, jwt.GenerateSignature(parsed.Message, []byte(currentSecret))) {
 						foundSecret = currentSecret
@@ -182,8 +187,12 @@ func main() {
 					// report
 					reportIntervalElapsed = time.Since(reportIntervalBegin).Seconds()
 					if reportIntervalElapsed > float64(*reportInterval) {
-						fmt.Printf("(Partition: %d) Running: %s / %s\n", pIdx, currentSecret, part.endSecret)
+						comparisonPerSecond := float64(numberOfComparison) / reportIntervalElapsed
+
+						fmt.Printf("(Partition: %d) Running: %s / %s\t(%.2f comp/sec)\n", pIdx, currentSecret, part.endSecret, comparisonPerSecond)
 						reportIntervalBegin = time.Now()
+
+						numberOfComparison = 0
 					}
 				}
 			}
